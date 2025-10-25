@@ -9,10 +9,12 @@ This demonstrates the difference between stateless and stateful LLM applications
 """
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from models import ChatRequest, ChatResponse, ChatMode
+from models import ChatRequest, ChatResponse, ChatMode, Provider
 from llm_service import LLMService
 from memory_service import MemoryService
 from stateful_llm_service import StatefulLLMService
+from vllm_service import VLLMService
+from stateful_vllm_service import StatefulVLLMService
 import logging
 import uuid
 
@@ -37,25 +39,41 @@ app.add_middleware(
 )
 
 # Initialize services
+# ChatGPT services (Responses API)
 stateless_service = None
 stateful_service = None
+# vLLM services (Responses API) - OPTIONAL
+vllm_stateless_service = None
+vllm_stateful_service = None
+# Shared services
 memory_service = None
 
 try:
-    # Initialize stateless service
+    # Initialize ChatGPT services (Responses API)
     stateless_service = LLMService()
-    logger.info("Stateless LLM Service initialized successfully")
+    logger.info("ChatGPT Stateless Service initialized successfully")
 
     # Initialize Redis memory service
     memory_service = MemoryService()
     logger.info("Memory Service initialized successfully")
 
-    # Initialize stateful service with memory
+    # Initialize ChatGPT stateful service with memory
     stateful_service = StatefulLLMService(memory_service)
-    logger.info("Stateful LLM Service initialized successfully")
+    logger.info("ChatGPT Stateful Service initialized successfully")
+
+    # Initialize vLLM services (local inference) - OPTIONAL
+    try:
+        vllm_stateless_service = VLLMService()
+        logger.info("vLLM Stateless Service initialized successfully")
+
+        vllm_stateful_service = StatefulVLLMService(memory_service)
+        logger.info("vLLM Stateful Service initialized successfully")
+    except Exception as vllm_error:
+        logger.warning(f"vLLM services not available: {vllm_error}")
+        logger.info("vLLM services are optional. ChatGPT services will still work.")
 
 except Exception as e:
-    logger.error(f"Failed to initialize services: {e}")
+    logger.error(f"Failed to initialize core services: {e}")
     # Services will be None if initialization fails
 
 
@@ -64,13 +82,26 @@ async def root():
     """Health check endpoint"""
     return {
         "status": "running",
-        "app": "Chat Application - Stateless vs Stateful",
+        "app": "Redis Memory Magic - Chat API Playground",
         "modes": {
-            "stateless": "No memory - demonstrates the problem",
+            "stateless": "No memory - each message is independent",
             "stateful": "Redis-backed memory - maintains conversation history"
         },
-        "stateless_available": stateless_service is not None,
-        "stateful_available": stateful_service is not None and memory_service is not None
+        "providers": {
+            "chatgpt": "OpenAI ChatGPT API (cloud)",
+            "vllm": "vLLM local inference (on-premises)"
+        },
+        "api": "Responses API - Better performance, lower costs, enhanced reasoning",
+        "services_available": {
+            "chatgpt": {
+                "stateless": stateless_service is not None,
+                "stateful": stateful_service is not None and memory_service is not None
+            },
+            "vllm": {
+                "stateless": vllm_stateless_service is not None,
+                "stateful": vllm_stateful_service is not None and memory_service is not None
+            }
+        }
     }
 
 
@@ -79,19 +110,25 @@ async def chat(request: ChatRequest):
     """
     Chat endpoint - sends a message to the LLM and returns a response.
 
-    Supports TWO modes:
+    Supports TWO modes with seamless toggling:
 
     STATELESS mode:
-    - Each request is independent
-    - No conversation history is maintained
+    - Messages ARE logged to Redis (for seamless mode switching)
+    - Only current message sent to API (no history)
     - The LLM will NOT remember previous messages
     - Demonstrates the problem with no memory
+    - Allows toggling to stateful mode without losing history
 
     STATEFUL mode:
-    - Conversation history stored in Redis by session_id
-    - Full context sent with each request
+    - Messages logged to Redis AND full history sent to API
+    - Full conversation context sent with each request
     - The LLM WILL remember previous messages
     - Demonstrates proper memory management
+
+    Seamless Toggling:
+    - Session ID maintained across both modes
+    - Messages always logged to enable switching without restart
+    - Toggle between modes anytime during conversation
 
     Args:
         request: ChatRequest with message, mode, and optional session_id
@@ -100,49 +137,83 @@ async def chat(request: ChatRequest):
         ChatResponse with response, mode, and session info
     """
     try:
-        logger.info(f"Received {request.mode} message: {request.message[:50]}...")
+        logger.info(f"Received {request.mode} message from {request.provider}: {request.message[:50]}...")
 
+        # Generate session_id if not provided
+        session_id = request.session_id if request.session_id else str(uuid.uuid4())
+
+        # Select the appropriate service based on provider and mode
         if request.mode == ChatMode.STATELESS:
-            # STATELESS MODE: No memory
-            if not stateless_service:
+            # STATELESS MODE: Store in Redis but DON'T send history to API
+            # This allows seamless toggling to stateful mode later
+
+            # Select service based on provider
+            if request.provider == Provider.CHATGPT:
+                service = stateless_service
+                service_name = "ChatGPT"
+            else:  # Provider.VLLM
+                service = vllm_stateless_service
+                service_name = "vLLM"
+
+            if not service:
                 raise HTTPException(
                     status_code=503,
-                    detail="Stateless service not available. Check your OPENAI_API_KEY."
+                    detail=f"Stateless {service_name} service not available. Check configuration."
                 )
 
-            response = stateless_service.get_response(request.message)
+            # Store user message in Redis (if memory service available)
+            if memory_service:
+                memory_service.add_message(session_id, "user", request.message)
 
-            logger.info(f"Generated stateless response: {response[:50]}...")
+            # Call API with ONLY the current message (no history)
+            response = service.get_response(request.message)
+
+            # Store assistant response in Redis (if memory service available)
+            if memory_service:
+                memory_service.add_message(session_id, "assistant", response)
+                message_count = memory_service.get_message_count(session_id)
+            else:
+                message_count = None
+
+            logger.info(f"Generated stateless response using {service_name} (logged to session {session_id[:8]}...): {response[:50]}...")
 
             return ChatResponse(
                 response=response,
                 mode=ChatMode.STATELESS,
-                session_id=None,
-                message_count=None
+                provider=request.provider,
+                session_id=session_id,
+                message_count=message_count
             )
 
         else:  # STATEFUL MODE
             # STATEFUL MODE: With memory
-            if not stateful_service or not memory_service:
+
+            # Select service based on provider
+            if request.provider == Provider.CHATGPT:
+                service = stateful_service
+                service_name = "ChatGPT"
+            else:  # Provider.VLLM
+                service = vllm_stateful_service
+                service_name = "vLLM"
+
+            if not service or not memory_service:
                 raise HTTPException(
                     status_code=503,
-                    detail="Stateful service not available. Check Redis connection and OPENAI_API_KEY."
+                    detail=f"Stateful {service_name} service not available. Check Redis connection and configuration."
                 )
 
-            # Generate session_id if not provided
-            session_id = request.session_id if request.session_id else str(uuid.uuid4())
-
             # Get response with conversation history
-            response = stateful_service.get_response(session_id, request.message)
+            response = service.get_response(session_id, request.message)
 
             # Get message count
-            message_count = stateful_service.get_message_count(session_id)
+            message_count = service.get_message_count(session_id)
 
-            logger.info(f"Generated stateful response for session {session_id[:8]}...: {response[:50]}...")
+            logger.info(f"Generated stateful response using {service_name} for session {session_id[:8]}...: {response[:50]}...")
 
             return ChatResponse(
                 response=response,
                 mode=ChatMode.STATEFUL,
+                provider=request.provider,
                 session_id=session_id,
                 message_count=message_count
             )

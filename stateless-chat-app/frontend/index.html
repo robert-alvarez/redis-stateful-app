@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stateless Chat</title>
+    <title>Redis Memory Magic - Chat Playground</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,6 +18,13 @@
                     <span class="mode-slider"></span>
                     <span class="mode-label-off">Stateless</span>
                     <span class="mode-label-on">Stateful</span>
+                </label>
+                <span class="badge provider-badge" id="provider-badge">ChatGPT</span>
+                <label class="mode-toggle-container">
+                    <input type="checkbox" id="provider-toggle" class="mode-checkbox">
+                    <span class="mode-slider"></span>
+                    <span class="mode-label-off">ChatGPT</span>
+                    <span class="mode-label-on">vLLM</span>
                 </label>
                 <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
                     <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -43,11 +50,19 @@
     <main class="main-content" id="messages-container">
         <!-- Welcome message (shown when empty) -->
         <div class="welcome-card" id="welcome-card">
-            <div class="welcome-emoji">👋</div>
-            <h2>Welcome to Chat Demo</h2>
-            <p>This demo shows the difference between <strong>stateless</strong> and <strong>stateful</strong> LLM applications.</p>
-            <p class="welcome-example"><strong>Try this:</strong> Say "My name is [Name]", then ask "What's my name?"</p>
-            <p class="welcome-hint"><em>Toggle between modes to see how memory changes the conversation!</em></p>
+            <div class="welcome-emoji">🤖</div>
+            <h2>Redis Memory Magic: Chat Playground</h2>
+            <p>Experiment with two powerful features:</p>
+            <p><strong>💭 Memory Toggle</strong><br>Turn conversation memory ON/OFF mid-chat!</p>
+            <p><strong>🏢 Provider Toggle</strong><br>Switch between ChatGPT (cloud) and vLLM (local)!</p>
+            <p class="welcome-example"><strong>Fun Test:</strong></p>
+            <ol style="text-align: left; display: inline-block; margin: 0;">
+                <li>Introduce yourself (memory OFF)</li>
+                <li>Ask "Who am I?" - watch it forget! 😅</li>
+                <li>Toggle memory ON</li>
+                <li>Ask again - now it remembers! ✨</li>
+            </ol>
+            <p class="welcome-hint"><em>Powered by OpenAI's Responses API for optimal performance!</em></p>
         </div>
 
         <!-- Messages will be appended here -->
@@ -73,7 +88,7 @@
                     </button>
                 </div>
             </form>
-            <div class="footer-text">Educational Demo: Stateless LLM Chat</div>
+            <div class="footer-text">Redis Memory Magic ✨ | Powered by OpenAI + Redis</div>
         </div>
     </footer>
 

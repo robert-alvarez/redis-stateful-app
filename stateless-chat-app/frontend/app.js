@@ -9,7 +9,8 @@
  */
 
 // Configuration
-const API_URL = 'http://localhost:9090/chat';
+// Use environment variable or default to localhost:9090
+const API_URL = window.CHAT_API_URL || 'http://localhost:9090/chat';
 
 // DOM Elements
 const chatForm = document.getElementById('chat-form');
@@ -21,10 +22,13 @@ const themeToggle = document.getElementById('theme-toggle');
 const loadingTemplate = document.getElementById('loading-template');
 const modeToggle = document.getElementById('mode-toggle');
 const modeBadge = document.getElementById('mode-badge');
+const providerToggle = document.getElementById('provider-toggle');
+const providerBadge = document.getElementById('provider-badge');
 
 // State
 let isLoading = false;
 let currentMode = 'stateless'; // 'stateless' or 'stateful'
+let currentProvider = 'chatgpt'; // 'chatgpt' or 'vllm'
 let sessionId = null; // Session ID for stateful mode
 
 /**
@@ -56,19 +60,37 @@ function toggleMode() {
     if (isStateful) {
         modeBadge.textContent = 'Has Memory';
         modeBadge.classList.add('stateful');
-
-        // Generate new session ID when switching to stateful
-        if (!sessionId) {
-            sessionId = generateSessionId();
-        }
     } else {
         modeBadge.textContent = 'No Memory';
         modeBadge.classList.remove('stateful');
-
-        // Don't clear session ID - keep it in case they switch back
     }
 
-    console.log(`Switched to ${currentMode} mode`, sessionId ? `(session: ${sessionId})` : '');
+    // Always maintain session ID - this allows seamless toggling
+    // Messages are always logged to Redis, but only sent to API when in stateful mode
+    if (!sessionId) {
+        sessionId = generateSessionId();
+    }
+
+    console.log(`Switched to ${currentMode} mode (session: ${sessionId})`);
+}
+
+/**
+ * Toggle between ChatGPT and vLLM provider
+ */
+function toggleProvider() {
+    const isVLLM = providerToggle.checked;
+    currentProvider = isVLLM ? 'vllm' : 'chatgpt';
+
+    // Update badge
+    if (isVLLM) {
+        providerBadge.textContent = 'vLLM (Local)';
+        providerBadge.classList.add('vllm');
+    } else {
+        providerBadge.textContent = 'ChatGPT';
+        providerBadge.classList.remove('vllm');
+    }
+
+    console.log(`Switched to ${currentProvider} provider`);
 }
 
 /**
@@ -205,16 +227,19 @@ function setLoading(loading) {
  */
 async function sendMessage(message) {
     try {
-        // Prepare request payload
+        // Ensure we have a session ID
+        if (!sessionId) {
+            sessionId = generateSessionId();
+        }
+
+        // Prepare request payload - ALWAYS include session_id
+        // This allows messages to be logged even in stateless mode
         const payload = {
             message: message,
-            mode: currentMode
+            mode: currentMode,
+            provider: currentProvider,
+            session_id: sessionId
         };
-
-        // Add session_id for stateful mode
-        if (currentMode === 'stateful' && sessionId) {
-            payload.session_id = sessionId;
-        }
 
         console.log('Sending request:', payload);
 
@@ -292,15 +317,23 @@ themeToggle.addEventListener('click', toggleTheme);
 modeToggle.addEventListener('change', toggleMode);
 
 /**
+ * Provider toggle event listener
+ */
+providerToggle.addEventListener('change', toggleProvider);
+
+/**
  * Initialize app
  */
 function init() {
     initTheme();
     messageInput.focus();
 
-    // Set initial mode
+    // Set initial mode and generate session ID
+    // Session ID is always generated to enable seamless mode toggling
     currentMode = 'stateless';
-    sessionId = null;
+    sessionId = generateSessionId();
+
+    console.log(`App initialized in ${currentMode} mode (session: ${sessionId})`);
 }
 
 // Start the app
@@ -309,31 +342,55 @@ init();
 /**
  * DEVELOPER NOTE:
  *
- * This application now supports BOTH modes to demonstrate the difference:
+ * This application demonstrates Redis-backed memory with TWO dimensions:
  *
- * === STATELESS MODE (Default) ===
- * What happens:
- * 1. User sends: "My name is Robert"
- * 2. LLM responds: "Nice to meet you, Robert!"
- * 3. User sends: "What's my name?"
- * 4. LLM responds: "I don't know your name." ❌
+ * === MEMORY MODE (Stateless vs Stateful) ===
  *
- * Why? Only the current message is sent to the LLM.
- * The LLM has NO memory of previous messages.
+ * STATELESS MODE (Default):
+ * - Only the current message is sent to the LLM
+ * - The LLM has NO memory of previous messages
+ * - Messages ARE still logged to Redis for seamless mode switching
  *
- * === STATEFUL MODE (Toggle On) ===
- * What happens:
- * 1. User sends: "My name is Robert"
- * 2. LLM responds: "Nice to meet you, Robert!"
- * 3. User sends: "What's my name?"
- * 4. LLM responds: "Your name is Robert!" ✅
+ * STATEFUL MODE (Toggle On):
+ * - The ENTIRE conversation history from Redis is sent with each request
+ * - The LLM remembers everything from the current session
+ * - Redis is the single source of truth for conversation history
  *
- * Why? The ENTIRE conversation history is stored in Redis and sent with each request.
- * The LLM remembers everything from the current session.
+ * === PROVIDER (ChatGPT vs vLLM) ===
  *
- * Implementation:
- * - Stateless: No storage, each request independent
- * - Stateful: Redis stores conversation by session_id, full history sent to LLM
+ * CHATGPT (Default):
+ * - Uses OpenAI's cloud API
+ * - Requires OPENAI_API_KEY
+ * - Production-ready, highly optimized
  *
- * Try toggling between modes to see the difference!
+ * vLLM (Toggle On):
+ * - Uses local vLLM server for on-premises inference
+ * - OpenAI-compatible API
+ * - Full data privacy and control
+ * - Requires running vLLM server (default: http://localhost:8000)
+ *
+ * === API ===
+ *
+ * This application uses the RESPONSES API exclusively:
+ * - Better performance (3% improvement on SWE-bench)
+ * - Lower costs (40-80% better cache utilization)
+ * - Better suited for reasoning models
+ * - Native support for agentic tools
+ * - Supported by both ChatGPT AND vLLM
+ * - We use store=false to keep Redis as the single source of truth
+ *
+ * === FOUR COMBINATIONS ===
+ * 1. ChatGPT + Stateless
+ * 2. ChatGPT + Stateful
+ * 3. vLLM + Stateless
+ * 4. vLLM + Stateful
+ *
+ * === SEAMLESS TOGGLING ===
+ * You can switch between modes at any time!
+ * - Messages are ALWAYS logged to Redis (even in stateless mode)
+ * - When you enable memory, it picks up the full conversation history
+ * - Switch between ChatGPT and vLLM mid-conversation
+ * - No need to restart - toggle on/off as needed!
+ *
+ * Try toggling between modes during a conversation!
  */
