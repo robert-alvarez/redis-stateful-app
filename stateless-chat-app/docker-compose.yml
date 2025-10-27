@@ -32,11 +32,11 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-your_openai_api_key_here}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-5-mini}
 
-      # vLLM Configuration (for self-hosted inference on AWS)
-      # Points to your vLLM server running on AWS
-      - VLLM_BASE_URL=${VLLM_BASE_URL:-http://your-vllm-server:8000/v1}
-      - VLLM_API_KEY=${VLLM_API_KEY:-EMPTY}
-      - VLLM_MODEL=${VLLM_MODEL:-meta-llama/Meta-Llama-3.1-8B-Instruct}
+      # Ollama Configuration (for local inference)
+      # Points to your Ollama server (default: host.docker.internal for Mac/Windows)
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434/v1}
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY:-ollama}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen3:0.6b}
 
       # Redis Configuration
       - REDIS_HOST=redis

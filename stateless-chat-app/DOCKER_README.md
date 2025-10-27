@@ -4,14 +4,14 @@ Run the entire Redis Memory Magic Chat application with a single command! This D
 - ✅ Backend API (FastAPI)
 - ✅ Frontend UI (Nginx)
 - ✅ Redis (Conversation memory)
-- ✅ vLLM integration (Self-hosted LLM inference on AWS)
+- ✅ Ollama integration (Local LLM inference)
 
 ## 📋 Prerequisites
 
 - Docker Desktop installed ([Download here](https://www.docker.com/products/docker-desktop))
 - Docker Compose (included with Docker Desktop)
 - (Optional) OpenAI API key for ChatGPT provider
-- vLLM server running on AWS for self-hosted inference (see configuration below)
+- (Optional) Ollama installed on your local machine for local inference ([Download here](https://ollama.com))
 
 ## 🚀 Quick Start
 
@@ -30,13 +30,13 @@ Create a `.env` file in the root directory:
 OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=gpt-5-mini
 
-# vLLM Configuration (for self-hosted inference on AWS)
-VLLM_BASE_URL=http://your-vllm-server:8000/v1
-VLLM_API_KEY=EMPTY
-VLLM_MODEL=meta-llama/Meta-Llama-3.1-8B-Instruct
+# Ollama Configuration (for local inference)
+OLLAMA_BASE_URL=http://host.docker.internal:11434/v1
+OLLAMA_API_KEY=ollama
+OLLAMA_MODEL=qwen3:0.6b
 ```
 
-**Note:** Configure your vLLM server URL to point to your AWS deployment. If you don't have an OpenAI API key, you can use only the vLLM provider!
+**Note:** The default Ollama URL uses `host.docker.internal` to access Ollama running on your host machine. If you don't have an OpenAI API key, you can use only the Ollama provider!
 
 ### 3. Start Everything
 
@@ -48,7 +48,7 @@ This will:
 1. Pull all necessary Docker images
 2. Build the backend and frontend
 3. Start Redis, Backend, and Frontend
-4. Connect to your vLLM server on AWS
+4. Connect to your local Ollama server (if installed)
 
 ### 4. Access the Application
 
@@ -61,16 +61,18 @@ This will:
 1. Open http://localhost:3000 in your browser
 2. Toggle between:
    - **Memory:** Stateless ↔ Stateful
-   - **Provider:** ChatGPT ↔ vLLM (AWS)
+   - **Provider:** Cloud (ChatGPT) ↔ Local (Ollama)
 3. Start chatting!
 
-### Testing Self-Hosted Inference
+### Testing Local Inference
 
-1. Toggle to **vLLM** provider (this uses your AWS vLLM server)
-2. Turn **memory ON**
-3. Say "My name is [Your Name]"
-4. Ask "What's my name?"
-5. It remembers! ✨
+1. Make sure Ollama is running on your machine: `ollama serve`
+2. Pull a model: `ollama pull qwen3:0.6b`
+3. Toggle to **Local** provider (this uses your local Ollama)
+4. Turn **memory ON**
+5. Say "My name is [Your Name]"
+6. Ask "What's my name?"
+7. It remembers! ✨
 
 ## 📊 Container Architecture
 
@@ -86,9 +88,9 @@ This will:
                     │
                     ↓
             ┌──────────────┐
-            │ vLLM Server  │
-            │   (AWS EC2)  │
-            │    :8000     │
+            │    Ollama    │
+            │  (Host OS)   │
+            │   :11434     │
             └──────────────┘
 ```
 
@@ -133,51 +135,53 @@ docker-compose ps
 
 ### Using Only ChatGPT (Cloud)
 
-If you only want to use ChatGPT and don't need self-hosted inference:
+If you only want to use ChatGPT and don't need local inference:
 
 1. Set your OpenAI API key in `.env`
-2. Use only ChatGPT provider in the UI
+2. Use only Cloud provider in the UI
 
-### Using Only vLLM (Self-Hosted)
+### Using Only Ollama (Local)
 
-If you only want self-hosted inference without ChatGPT:
+If you only want local inference without ChatGPT:
 
 1. Don't set `OPENAI_API_KEY`
-2. Configure `VLLM_BASE_URL` to point to your AWS vLLM server
-3. Use only vLLM provider in the UI
+2. Install and run Ollama on your machine
+3. Use only Local provider in the UI
 
-### vLLM AWS Deployment Guide
+### Ollama Setup Guide
 
-To deploy vLLM on AWS:
+To set up Ollama for local inference:
 
-1. **Launch GPU Instance:**
+1. **Install Ollama:**
+   - Visit [ollama.com](https://ollama.com)
+   - Download and install for your OS (Mac, Linux, Windows)
+
+2. **Start Ollama:**
    ```bash
-   # Recommended instance types:
-   # g5.xlarge - 1x A10G (24GB) - Good for 7B-13B models
-   # g5.2xlarge - 1x A10G (24GB) - Better performance
-   # g5.12xlarge - 4x A10G (96GB) - Large models
-   # p3.2xlarge - 1x V100 (16GB) - Alternative option
+   ollama serve
    ```
 
-2. **Install vLLM:**
+3. **Pull a Model:**
    ```bash
-   pip install vllm
+   # Small, fast model (recommended for testing)
+   ollama pull qwen3:0.6b
+
+   # Other popular models:
+   # ollama pull llama3.2
+   # ollama pull mistral
+   # ollama pull phi3
    ```
 
-3. **Start vLLM Server:**
+4. **Verify It's Running:**
    ```bash
-   vllm serve meta-llama/Meta-Llama-3.1-8B-Instruct \
-     --host 0.0.0.0 \
-     --port 8000 \
-     --api-key EMPTY
+   curl http://localhost:11434/v1/models
    ```
 
-4. **Configure Security Group:**
-   - Allow inbound TCP on port 8000 from your IP
-
-5. **Update .env:**
+5. **Update .env (optional):**
    ```bash
-   VLLM_BASE_URL=http://your-ec2-public-ip:8000/v1
+   # Default values work out of the box
+   OLLAMA_BASE_URL=http://host.docker.internal:11434/v1
+   OLLAMA_MODEL=qwen3:0.6b
    ```
 
 ## 📦 Distributed Deployment
@@ -218,14 +222,17 @@ docker-compose up -d
 
 ## 🐛 Troubleshooting
 
-### vLLM Server Not Responding
+### Ollama Not Responding
 
 ```bash
-# Test vLLM server connectivity from backend container
-docker exec -it chat-backend curl http://your-vllm-server:8000/v1/models
+# Check if Ollama is running on your host
+curl http://localhost:11434/v1/models
 
-# Check if vLLM is running on AWS
-ssh your-aws-server "ps aux | grep vllm"
+# Test Ollama connectivity from backend container (Mac/Windows)
+docker exec -it chat-backend curl http://host.docker.internal:11434/v1/models
+
+# Start Ollama if it's not running
+ollama serve
 ```
 
 ### Backend Can't Connect to Redis
@@ -242,13 +249,13 @@ docker exec -it redis-memory redis-cli ping
 2. Verify backend is running: `curl http://localhost:9090/`
 3. Check CORS settings in `backend/main.py`
 
-### vLLM Connection Issues
+### Ollama Connection Issues
 
-If you can't connect to your vLLM server:
-1. Verify the server is running: `ssh your-aws-server "curl localhost:8000/v1/models"`
-2. Check security group allows inbound traffic on port 8000
-3. Verify the URL in `.env` is correct
-4. Test connectivity: `curl http://your-vllm-server:8000/v1/models`
+If you can't connect to Ollama:
+1. Verify Ollama is running: `ollama list` should show your models
+2. Check Ollama is serving: `curl http://localhost:11434/v1/models`
+3. On Linux, you may need to use `--network host` or the container's IP instead of `host.docker.internal`
+4. Verify you've pulled a model: `ollama pull qwen3:0.6b`
 
 ## 🔒 Security Notes
 
@@ -272,19 +279,20 @@ For production:
 ## 📚 Additional Resources
 
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
-- [vLLM Documentation](https://docs.vllm.ai/)
+- [Ollama Documentation](https://ollama.com)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Redis Documentation](https://redis.io/documentation)
-- [AWS EC2 GPU Instances](https://aws.amazon.com/ec2/instance-types/)
+- [Available Ollama Models](https://ollama.com/library)
 
 ## 💡 Tips
 
-- **vLLM server** - Must be running on AWS before starting the application
+- **Ollama** - Must be running on your host machine before using Local provider
 - **Conversations persist** - Stored in Docker volume `redis-data`
 - **Clean slate:** `docker-compose down -v` removes all data
 - **Development mode:** Use `docker-compose up` (without `-d`) to see live logs
-- **Cost optimization:** Use spot instances on AWS for vLLM to reduce costs
+- **Model switching:** Use different Ollama models by setting `OLLAMA_MODEL` in `.env`
+- **No API costs:** Ollama runs completely locally with no API fees
 
 ---
 
-**Built with:** Docker 🐳 | FastAPI ⚡ | Redis 🔴 | vLLM 🚀 | OpenAI 🤖
+**Built with:** Docker 🐳 | FastAPI ⚡ | Redis 🔴 | Ollama 🦙 | OpenAI 🤖

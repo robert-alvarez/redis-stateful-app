@@ -13,8 +13,8 @@ from models import ChatRequest, ChatResponse, ChatMode, Provider
 from llm_service import LLMService
 from memory_service import MemoryService
 from stateful_llm_service import StatefulLLMService
-from vllm_service import VLLMService
-from stateful_vllm_service import StatefulVLLMService
+from ollama_service import OllamaService
+from stateful_ollama_service import StatefulOllamaService
 import logging
 import uuid
 
@@ -42,9 +42,9 @@ app.add_middleware(
 # ChatGPT services (Responses API)
 stateless_service = None
 stateful_service = None
-# vLLM services (Responses API) - OPTIONAL
-vllm_stateless_service = None
-vllm_stateful_service = None
+# Ollama services (Chat Completions API) - OPTIONAL
+ollama_stateless_service = None
+ollama_stateful_service = None
 # Shared services
 memory_service = None
 
@@ -61,16 +61,16 @@ try:
     stateful_service = StatefulLLMService(memory_service)
     logger.info("ChatGPT Stateful Service initialized successfully")
 
-    # Initialize vLLM services (local inference) - OPTIONAL
+    # Initialize Ollama services (local inference) - OPTIONAL
     try:
-        vllm_stateless_service = VLLMService()
-        logger.info("vLLM Stateless Service initialized successfully")
+        ollama_stateless_service = OllamaService()
+        logger.info("Ollama Stateless Service initialized successfully")
 
-        vllm_stateful_service = StatefulVLLMService(memory_service)
-        logger.info("vLLM Stateful Service initialized successfully")
-    except Exception as vllm_error:
-        logger.warning(f"vLLM services not available: {vllm_error}")
-        logger.info("vLLM services are optional. ChatGPT services will still work.")
+        ollama_stateful_service = StatefulOllamaService(memory_service)
+        logger.info("Ollama Stateful Service initialized successfully")
+    except Exception as ollama_error:
+        logger.warning(f"Ollama services not available: {ollama_error}")
+        logger.info("Ollama services are optional. ChatGPT services will still work.")
 
 except Exception as e:
     logger.error(f"Failed to initialize core services: {e}")
@@ -89,17 +89,16 @@ async def root():
         },
         "providers": {
             "chatgpt": "OpenAI ChatGPT API (cloud)",
-            "vllm": "vLLM local inference (on-premises)"
+            "ollama": "Ollama local inference (on-premises)"
         },
-        "api": "Responses API - Better performance, lower costs, enhanced reasoning",
         "services_available": {
             "chatgpt": {
                 "stateless": stateless_service is not None,
                 "stateful": stateful_service is not None and memory_service is not None
             },
-            "vllm": {
-                "stateless": vllm_stateless_service is not None,
-                "stateful": vllm_stateful_service is not None and memory_service is not None
+            "ollama": {
+                "stateless": ollama_stateless_service is not None,
+                "stateful": ollama_stateful_service is not None and memory_service is not None
             }
         }
     }
@@ -151,9 +150,9 @@ async def chat(request: ChatRequest):
             if request.provider == Provider.CHATGPT:
                 service = stateless_service
                 service_name = "ChatGPT"
-            else:  # Provider.VLLM
-                service = vllm_stateless_service
-                service_name = "vLLM"
+            else:  # Provider.OLLAMA
+                service = ollama_stateless_service
+                service_name = "Ollama"
 
             if not service:
                 raise HTTPException(
@@ -192,9 +191,9 @@ async def chat(request: ChatRequest):
             if request.provider == Provider.CHATGPT:
                 service = stateful_service
                 service_name = "ChatGPT"
-            else:  # Provider.VLLM
-                service = vllm_stateful_service
-                service_name = "vLLM"
+            else:  # Provider.OLLAMA
+                service = ollama_stateful_service
+                service_name = "Ollama"
 
             if not service or not memory_service:
                 raise HTTPException(

@@ -116,6 +116,11 @@ body {
     color: white;
 }
 
+.badge.local {
+    background: #3b82f6;
+    color: white;
+}
+
 /* Mode Toggle Switch */
 .mode-toggle-container {
     position: relative;

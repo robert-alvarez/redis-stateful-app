@@ -28,7 +28,7 @@ const providerBadge = document.getElementById('provider-badge');
 // State
 let isLoading = false;
 let currentMode = 'stateless'; // 'stateless' or 'stateful'
-let currentProvider = 'chatgpt'; // 'chatgpt' or 'vllm'
+let currentProvider = 'chatgpt'; // 'chatgpt' or 'ollama'
 let sessionId = null; // Session ID for stateful mode
 
 /**
@@ -75,22 +75,23 @@ function toggleMode() {
 }
 
 /**
- * Toggle between ChatGPT and vLLM provider
+ * Toggle between Cloud (ChatGPT) and Local (Ollama) provider
  */
 function toggleProvider() {
-    const isVLLM = providerToggle.checked;
-    currentProvider = isVLLM ? 'vllm' : 'chatgpt';
+    const isLocal = providerToggle.checked;
+    currentProvider = isLocal ? 'ollama' : 'chatgpt';
 
     // Update badge
-    if (isVLLM) {
-        providerBadge.textContent = 'vLLM (Local)';
-        providerBadge.classList.add('vllm');
+    providerBadge.classList.remove('local');
+
+    if (isLocal) {
+        providerBadge.textContent = 'Local';
+        providerBadge.classList.add('local');
     } else {
-        providerBadge.textContent = 'ChatGPT';
-        providerBadge.classList.remove('vllm');
+        providerBadge.textContent = 'Cloud';
     }
 
-    console.log(`Switched to ${currentProvider} provider`);
+    console.log(`Switched to ${isLocal ? 'Local (Ollama)' : 'Cloud (ChatGPT)'} provider`);
 }
 
 /**
@@ -356,41 +357,34 @@ init();
  * - The LLM remembers everything from the current session
  * - Redis is the single source of truth for conversation history
  *
- * === PROVIDER (ChatGPT vs vLLM) ===
+ * === PROVIDER (Cloud vs Local) ===
  *
- * CHATGPT (Default):
+ * CLOUD (ChatGPT - Default):
  * - Uses OpenAI's cloud API
  * - Requires OPENAI_API_KEY
  * - Production-ready, highly optimized
+ * - Best performance and quality
  *
- * vLLM (Toggle On):
- * - Uses local vLLM server for on-premises inference
+ * LOCAL (Ollama):
+ * - Uses local Ollama for on-premises inference
  * - OpenAI-compatible API
+ * - Easy to install and use (ollama.com)
+ * - Requires running Ollama (default: http://localhost:11434)
  * - Full data privacy and control
- * - Requires running vLLM server (default: http://localhost:8000)
- *
- * === API ===
- *
- * This application uses the RESPONSES API exclusively:
- * - Better performance (3% improvement on SWE-bench)
- * - Lower costs (40-80% better cache utilization)
- * - Better suited for reasoning models
- * - Native support for agentic tools
- * - Supported by both ChatGPT AND vLLM
- * - We use store=false to keep Redis as the single source of truth
+ * - No API costs
  *
  * === FOUR COMBINATIONS ===
- * 1. ChatGPT + Stateless
- * 2. ChatGPT + Stateful
- * 3. vLLM + Stateless
- * 4. vLLM + Stateful
+ * 1. Cloud (ChatGPT) + Stateless
+ * 2. Cloud (ChatGPT) + Stateful
+ * 3. Local (Ollama) + Stateless
+ * 4. Local (Ollama) + Stateful
  *
  * === SEAMLESS TOGGLING ===
- * You can switch between modes at any time!
+ * You can switch between modes and providers at any time!
  * - Messages are ALWAYS logged to Redis (even in stateless mode)
  * - When you enable memory, it picks up the full conversation history
- * - Switch between ChatGPT and vLLM mid-conversation
+ * - Switch between Cloud (ChatGPT) and Local (Ollama) mid-conversation
  * - No need to restart - toggle on/off as needed!
  *
- * Try toggling between modes during a conversation!
+ * Try toggling between modes and providers during a conversation!
  */

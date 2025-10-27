@@ -14,8 +14,8 @@ class ChatMode(str, Enum):
 
 class Provider(str, Enum):
     """LLM Provider enum"""
-    CHATGPT = "chatgpt"  # OpenAI ChatGPT API
-    VLLM = "vllm"  # Local vLLM server
+    CHATGPT = "chatgpt"  # OpenAI ChatGPT API (cloud)
+    OLLAMA = "ollama"  # Local Ollama server
 
 
 class ChatRequest(BaseModel):
