@@ -10,7 +10,29 @@
     <!-- Header -->
     <header class="header">
         <div class="header-content">
-            <h1>Chat</h1>
+            <div class="header-left">
+                <h1>Chat</h1>
+                <!-- Memory Stats (shown when memory is ON) -->
+                <div class="header-stats" id="header-stats">
+                    <div class="header-stat-item">
+                        <span class="stat-icon">💬</span>
+                        <span class="stat-count" id="stat-total-header">0</span>
+                    </div>
+                    <div class="header-stat-item">
+                        <span class="stat-icon">👤</span>
+                        <span class="stat-count" id="stat-user-header">0</span>
+                    </div>
+                    <div class="header-stat-item">
+                        <span class="stat-icon">☁️</span>
+                        <span class="stat-count" id="stat-chatgpt-header">0</span>
+                    </div>
+                    <div class="header-stat-item">
+                        <span class="stat-icon">🖥️</span>
+                        <span class="stat-count" id="stat-ollama-header">0</span>
+                    </div>
+                    <div class="memory-updated-badge" id="memory-updated-badge">Updated</div>
+                </div>
+            </div>
             <div class="header-controls">
                 <span class="badge" id="mode-badge">No Memory</span>
                 <label class="mode-toggle-container">
@@ -51,18 +73,19 @@
         <!-- Welcome message (shown when empty) -->
         <div class="welcome-card" id="welcome-card">
             <div class="welcome-emoji">🤖</div>
-            <h2>Redis Memory Magic: Chat Playground</h2>
-            <p>Experiment with two powerful features:</p>
-            <p><strong>💭 Memory Toggle</strong><br>Turn conversation memory ON/OFF mid-chat!</p>
-            <p><strong>🏢 Provider Toggle</strong><br>Switch between Cloud (ChatGPT) and Local (Ollama)!</p>
-            <p class="welcome-example"><strong>Fun Test:</strong></p>
+            <h2>Redis Memory Magic</h2>
+            <p>Switch AI models mid-conversation without losing context.</p>
+            <p><strong>Redis-powered memory lets you:</strong></p>
+            <p><strong>💭</strong> Toggle between stateless and stateful modes instantly</p>
+            <p><strong>🏢</strong> Switch from ChatGPT to Ollama (or vice versa) seamlessly</p>
+            <p><strong>✨</strong> Maintain full conversation history across all changes</p>
+            <p class="welcome-example"><strong>Try it:</strong></p>
             <ol style="text-align: left; display: inline-block; margin: 0;">
-                <li>Introduce yourself (memory OFF)</li>
-                <li>Ask "Who am I?" - watch it forget! 😅</li>
-                <li>Toggle memory ON</li>
-                <li>Ask again - now it remembers! ✨</li>
+                <li>Start chatting with ChatGPT</li>
+                <li>Switch to Ollama mid-conversation</li>
+                <li>Your context persists – no restarts needed!</li>
             </ol>
-            <p class="welcome-hint"><em>Powered by OpenAI's Responses API for optimal performance!</em></p>
+            <p class="welcome-hint"><em>Powered by Redis Stack</em></p>
         </div>
 
         <!-- Messages will be appended here -->

@@ -24,12 +24,25 @@ const modeToggle = document.getElementById('mode-toggle');
 const modeBadge = document.getElementById('mode-badge');
 const providerToggle = document.getElementById('provider-toggle');
 const providerBadge = document.getElementById('provider-badge');
+const headerStats = document.getElementById('header-stats');
+const memoryUpdatedBadge = document.getElementById('memory-updated-badge');
+const statTotalHeader = document.getElementById('stat-total-header');
+const statUserHeader = document.getElementById('stat-user-header');
+const statChatGPTHeader = document.getElementById('stat-chatgpt-header');
+const statOllamaHeader = document.getElementById('stat-ollama-header');
 
 // State
 let isLoading = false;
 let currentMode = 'stateless'; // 'stateless' or 'stateful'
 let currentProvider = 'chatgpt'; // 'chatgpt' or 'ollama'
 let sessionId = null; // Session ID for stateful mode
+
+// Message stats (per-session)
+let messageStats = {
+    userMessages: 0,
+    chatgptResponses: 0,
+    ollamaResponses: 0
+};
 
 /**
  * Initialize theme from localStorage
@@ -50,6 +63,48 @@ function toggleTheme() {
 }
 
 /**
+ * Update stats display
+ */
+function updateStats() {
+    const total = messageStats.userMessages + messageStats.chatgptResponses + messageStats.ollamaResponses;
+    statTotalHeader.textContent = total;
+    statUserHeader.textContent = messageStats.userMessages;
+    statChatGPTHeader.textContent = messageStats.chatgptResponses;
+    statOllamaHeader.textContent = messageStats.ollamaResponses;
+}
+
+/**
+ * Reset stats for new session
+ */
+function resetStats() {
+    messageStats.userMessages = 0;
+    messageStats.chatgptResponses = 0;
+    messageStats.ollamaResponses = 0;
+    updateStats();
+}
+
+/**
+ * Show memory updated badge
+ */
+function showMemoryUpdated() {
+    memoryUpdatedBadge.classList.add('show');
+    setTimeout(() => {
+        memoryUpdatedBadge.classList.remove('show');
+    }, 1500); // Show for 1.5 seconds
+}
+
+/**
+ * Show/hide header stats
+ */
+function toggleHeaderStats(show) {
+    if (show) {
+        headerStats.classList.add('visible');
+    } else {
+        headerStats.classList.remove('visible');
+    }
+}
+
+/**
  * Toggle between stateless and stateful mode
  */
 function toggleMode() {
@@ -60,9 +115,13 @@ function toggleMode() {
     if (isStateful) {
         modeBadge.textContent = 'Has Memory';
         modeBadge.classList.add('stateful');
+        // Show header stats when memory is ON
+        toggleHeaderStats(true);
     } else {
         modeBadge.textContent = 'No Memory';
         modeBadge.classList.remove('stateful');
+        // Hide header stats when memory is OFF
+        toggleHeaderStats(false);
     }
 
     // Always maintain session ID - this allows seamless toggling
@@ -285,6 +344,15 @@ chatForm.addEventListener('submit', async (e) => {
     // Add user message to UI
     addMessage(message, true);
 
+    // Update stats - increment user messages
+    messageStats.userMessages++;
+    updateStats();
+
+    // Show memory updated notification if in stateful mode
+    if (currentMode === 'stateful') {
+        showMemoryUpdated();
+    }
+
     // Clear input
     messageInput.value = '';
 
@@ -298,6 +366,19 @@ chatForm.addEventListener('submit', async (e) => {
 
         // Add assistant response to UI
         addMessage(response, false);
+
+        // Update stats - increment assistant responses based on provider
+        if (currentProvider === 'chatgpt') {
+            messageStats.chatgptResponses++;
+        } else {
+            messageStats.ollamaResponses++;
+        }
+        updateStats();
+
+        // Show memory updated notification if in stateful mode
+        if (currentMode === 'stateful') {
+            showMemoryUpdated();
+        }
 
     } catch (error) {
         showError(error.message || 'Something went wrong. Please try again.');
@@ -333,6 +414,12 @@ function init() {
     // Session ID is always generated to enable seamless mode toggling
     currentMode = 'stateless';
     sessionId = generateSessionId();
+
+    // Initialize stats
+    resetStats();
+
+    // Hide header stats initially (only shown when memory is ON)
+    toggleHeaderStats(false);
 
     console.log(`App initialized in ${currentMode} mode (session: ${sessionId})`);
 }
