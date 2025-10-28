@@ -135,7 +135,6 @@ class MemoryService:
                 # Get all messages by using a very large top_k
                 # MessageHistory doesn't have a "get all" option, so we use a large number
                 messages = self.message_history.get_recent(
-                    top_k=10000,  # Arbitrarily large number to get all messages
                     session_tag=session_id
                 )
 
