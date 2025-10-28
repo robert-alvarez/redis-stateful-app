@@ -2,18 +2,25 @@
 
 ![](redis_logo.png)
 
-A production-ready chat application demonstrating **stateless vs stateful LLM architecture** with Redis-backed conversation memory. Switch between cloud (ChatGPT) and local (Ollama) inference providers seamlessly while maintaining conversation history.
+Redis Memory Magic is a hands-on demo that shows how Redis can give your LLM-powered applications memory **and** the freedom to switch between models without breaking the conversation.
 
 ## 📖 Overview
+
+Modern AI applications often face a trade-off between performance, cost, and context.
+This demo illustrates how Redis-backed memory removes that limitation by persisting context independently of the model
 
 This application showcases the fundamental difference between stateless and stateful AI applications:
 
 - **Stateless Mode**: Each message is sent to the LLM without context - the AI forgets previous messages
 - **Stateful Mode**: Full conversation history is maintained in Redis - the AI remembers your entire conversation
 
-Additionally, you can switch between:
-- **Cloud Provider (ChatGPT)**: Fast, powerful responses from OpenAI's API
-- **Local Provider (Ollama)**: Privacy-focused, offline inference running on your machine
+## 🔄 Smart Model Switching
+
+With Redis handling memory, you can route messages dynamically based on the complexity of the task — all without losing continuity:
+
+🧩 Complex reasoning tasks → Route to ChatGPT (Cloud) for the best accuracy and depth.
+
+⚡ Simple or lightweight queries → Route to local model (via Ollama) for faster, cheaper, on-prem inference.
 
 ## 🚀 Quick Start with Docker
 
