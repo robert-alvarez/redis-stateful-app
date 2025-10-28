@@ -77,7 +77,7 @@ class StatefulLLMService:
                 input=messages,  # Pass full conversation history from Redis as input
                 store=False,  # Disable OpenAI storage - Redis manages our conversation history
                 reasoning={"effort":"minimal"},
-                max_output_tokens=2500  # Higher limit for GPT-5 reasoning + output tokens
+                max_output_tokens=200  # Higher limit for GPT-5 reasoning + output tokens
             )
 
             logger.info(f"OpenAI response: {response}")

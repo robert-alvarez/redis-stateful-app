@@ -82,7 +82,7 @@ class StatefulOllamaService:
                 model=self.model,
                 messages=messages,  # Pass full conversation history from Redis
                 temperature=0.7,
-                max_tokens=2000
+                max_tokens=500
             )
 
             assistant_response = response.choices[0].message.content

@@ -53,7 +53,7 @@ class LLMService:
                 input=user_message,  # Use 'input' instead of 'messages'
                 store=False,  # Explicitly disable storage for stateless operation
                 reasoning={"effort":"minimal"},
-                max_output_tokens=2500  # Higher limit for GPT-5 reasoning + output tokens
+                max_output_tokens=200  # Higher limit for GPT-5 reasoning + output tokens
             )
 
             logger.info(f"OpenAI response: {response}")

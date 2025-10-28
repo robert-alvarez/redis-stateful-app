@@ -1,15 +1,14 @@
 version: '3.8'
 
 services:
-  # Redis - Conversation memory storage
+  # Redis - Conversation memory storage with RediSearch for MessageHistory
   redis:
-    image: redis:7-alpine
+    image: redis/redis-stack-server:latest
     container_name: redis-memory
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
-    command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
