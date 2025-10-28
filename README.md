@@ -1,5 +1,7 @@
 # 🚀 Redis Memory Magic - LLM Chat Application
 
+[](redis_logo.png)
+
 A production-ready chat application demonstrating **stateless vs stateful LLM architecture** with Redis-backed conversation memory. Switch between cloud (ChatGPT) and local (Ollama) inference providers seamlessly while maintaining conversation history.
 
 ## 📖 Overview
